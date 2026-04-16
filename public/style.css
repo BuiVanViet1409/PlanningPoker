@@ -518,37 +518,72 @@ body {
   pointer-events: none;
 }
 
+/* Bottom deck - real playing card style */
 .poker-card {
-  width: 58px;
-  height: 82px;
-  border: 2px solid var(--border);
-  border-radius: 8px;
+  width: 64px;
+  height: 92px;
+  border: 2px solid #d0d5dd;
+  border-radius: 10px;
   background: var(--surface);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--text);
   cursor: pointer;
   transition: all var(--transition);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-family: inherit;
   position: relative;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  gap: 2px;
+}
+
+/* Top-left corner number */
+.poker-card::before {
+  content: attr(data-value);
+  position: absolute;
+  top: 5px;
+  left: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  color: inherit;
+  line-height: 1;
+}
+
+/* Bottom-right corner number (rotated) */
+.poker-card::after {
+  content: attr(data-value);
+  position: absolute;
+  bottom: 5px;
+  right: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  color: inherit;
+  line-height: 1;
+  transform: rotate(180deg);
 }
 
 .poker-card:hover {
   border-color: var(--primary);
-  background: var(--primary-bg);
+  background: #f8f7ff;
   color: var(--primary);
-  box-shadow: 0 2px 8px rgba(99,102,241,0.15);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.15);
 }
 
 .poker-card.selected {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary-dark);
-  box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+
+.card-number {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  z-index: 1;
 }
 
 /* ========== TOAST ========== */
@@ -580,7 +615,9 @@ body {
 @media (max-width: 600px) {
   .create-card { padding: 28px; }
   .poker-table { min-width: 260px; padding: 28px 24px; border-radius: 24px; }
-  .poker-card { width: 48px; height: 68px; font-size: 16px; }
+  .poker-card { width: 52px; height: 76px; }
+  .card-number { font-size: 18px; }
+  .poker-card::before, .poker-card::after { font-size: 8px; }
   .player-vote-card { width: 46px; height: 64px; font-size: 18px; }
   .middle-section { flex-direction: column; }
   .player-col { flex-direction: row; }

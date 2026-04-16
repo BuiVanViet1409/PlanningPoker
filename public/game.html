@@ -171,8 +171,12 @@
       gameCards.forEach(card => {
         const el = document.createElement('button');
         el.className = 'poker-card';
-        el.textContent = card;
         el.dataset.value = card;
+        // Center number as main content
+        const numSpan = document.createElement('span');
+        numSpan.className = 'card-number';
+        numSpan.textContent = card;
+        el.appendChild(numSpan);
         el.addEventListener('click', () => {
           if (isRevealed) return;
           if (selectedCard === card) {
