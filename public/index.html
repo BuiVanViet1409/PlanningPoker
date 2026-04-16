@@ -17,11 +17,6 @@
       <h2>Create game</h2>
 
       <div class="form-group">
-        <label for="gameName">Game's name</label>
-        <input type="text" id="gameName" placeholder="Game's name" maxlength="60" autofocus>
-      </div>
-
-      <div class="form-group">
         <label for="votingSystem">Voting system</label>
         <select id="votingSystem">
           <option value="fibonacci">Fibonacci ( 0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, &#9749; )</option>
@@ -30,23 +25,15 @@
         </select>
       </div>
 
-      <button id="createBtn" class="btn-primary" disabled>Create game</button>
+      <button id="createBtn" class="btn-primary">Create game</button>
     </div>
   </div>
 
   <script>
-    const nameInput = document.getElementById('gameName');
     const createBtn = document.getElementById('createBtn');
     const votingSystem = document.getElementById('votingSystem');
 
-    nameInput.addEventListener('input', () => {
-      createBtn.disabled = !nameInput.value.trim();
-    });
-
     createBtn.addEventListener('click', async () => {
-      const name = nameInput.value.trim();
-      if (!name) return;
-
       createBtn.disabled = true;
       createBtn.textContent = 'Creating...';
 
@@ -54,7 +41,7 @@
         const res = await fetch('/api/games', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, votingSystem: votingSystem.value }),
+          body: JSON.stringify({ name: 'Planning Poker', votingSystem: votingSystem.value }),
         });
         const data = await res.json();
         if (data.id) {
@@ -65,10 +52,6 @@
         createBtn.disabled = false;
         createBtn.textContent = 'Create game';
       }
-    });
-
-    nameInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !createBtn.disabled) createBtn.click();
     });
   </script>
 </body>
