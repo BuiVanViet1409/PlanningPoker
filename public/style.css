@@ -360,11 +360,8 @@ body {
   font-size: 13px;
   font-weight: 600;
   color: #5e6c84;
-  max-width: 90px;
   text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .player-label.is-me { color: #2684ff; }
