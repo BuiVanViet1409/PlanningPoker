@@ -400,41 +400,73 @@ body {
 }
 
 /* Player vote card */
+/* Playing card style */
 .player-vote-card {
   width: 56px;
   height: 76px;
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
   font-weight: 800;
-  box-shadow: var(--shadow-sm);
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .player-vote-card.no-vote {
   background: var(--bg);
-  border: 2px dashed var(--border);
+  border: 2px dashed #d0d5dd;
 }
 
 .player-vote-card.face-down {
-  background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
+  background: var(--primary);
   border: 2px solid var(--primary-dark);
-  box-shadow: 0 2px 8px rgba(79,70,229,0.2);
+  overflow: hidden;
+}
+
+/* Diamond pattern on face-down card */
+.player-vote-card.face-down::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255,255,255,0.25);
 }
 
 .player-vote-card.face-down::after {
-  content: '?';
-  color: rgba(255,255,255,0.3);
-  font-size: 24px;
-  font-weight: 800;
+  content: '\2660';
+  color: rgba(255,255,255,0.2);
+  font-size: 28px;
 }
 
 .player-vote-card.revealed {
   background: var(--surface);
-  border: 2px solid var(--primary);
-  color: var(--primary);
-  box-shadow: 0 2px 8px rgba(79,70,229,0.12);
+  border: 2px solid var(--primary-light);
+  color: var(--primary-dark);
+  box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+}
+
+/* Mini corner suit on revealed card */
+.player-vote-card.revealed::before {
+  content: '\2660';
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 8px;
+  color: var(--primary-light);
+  font-weight: 400;
+}
+
+.player-vote-card.revealed::after {
+  content: '\2660';
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-size: 8px;
+  color: var(--primary-light);
+  font-weight: 400;
+  transform: rotate(180deg);
 }
 
 .player-label {
@@ -490,38 +522,26 @@ body {
   width: 58px;
   height: 82px;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--surface);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--text);
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: inherit;
   position: relative;
-}
-
-.poker-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary-bg) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .poker-card:hover {
   border-color: var(--primary);
   background: var(--primary-bg);
   color: var(--primary);
-}
-
-.poker-card:hover::before {
-  opacity: 1;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.15);
 }
 
 .poker-card.selected {
@@ -530,8 +550,6 @@ body {
   border-color: var(--primary-dark);
   box-shadow: 0 2px 8px rgba(99,102,241,0.25);
 }
-
-.poker-card.selected::before { display: none; }
 
 /* ========== TOAST ========== */
 .toast {

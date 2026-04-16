@@ -52,14 +52,14 @@
         <!-- Table -->
         <div class="poker-table">
           <div id="lonelySplash" class="lonely-splash hidden">
-            <span class="lonely-emoji">&#129303;</span>
-            <span class="lonely-text">Feeling lonely?</span>
-            <a href="#" id="inviteLinkInner" class="lonely-link">Invite players</a>
+            <span class="lonely-emoji">&#128075;</span>
+            <span class="lonely-text">Hey! Invite your team to get started</span>
+            <a href="#" id="inviteLinkInner" class="lonely-link">&#128279; Copy invite link</a>
           </div>
           <div id="tableContent" class="table-content">
             <div id="tableStatus" class="table-status">Pick your cards!</div>
-            <button id="revealBtn" class="btn-reveal hidden">Reveal votes</button>
-            <button id="resetBtn" class="btn-new-vote hidden">Start new voting</button>
+            <button id="revealBtn" class="btn-reveal hidden">&#127922; Reveal votes</button>
+            <button id="resetBtn" class="btn-new-vote hidden">&#128260; New round</button>
           </div>
           <!-- Stats (shown after reveal) -->
           <div id="statsBar" class="stats-bar hidden">
@@ -79,7 +79,7 @@
 
     <!-- Card Deck -->
     <div class="card-deck-area">
-      <p class="deck-label">Choose your card &#128076;</p>
+      <p class="deck-label">&#127183; Tap a card to vote</p>
       <div id="cardDeck" class="card-deck"></div>
     </div>
   </div>
@@ -293,7 +293,9 @@
       const totalCount = players.length;
 
       if (state.revealed) {
-        tableStatus.textContent = 'Votes revealed!';
+        tableStatus.innerHTML = state.stats && state.stats.consensus
+          ? '\u2705 Consensus! Great teamwork!'
+          : '\u2728 Votes are in! Let\u2019s discuss';
         revealBtn.classList.add('hidden');
         resetBtn.classList.remove('hidden');
         cardDeck.classList.add('disabled');
@@ -313,14 +315,17 @@
         resetBtn.classList.add('hidden');
         cardDeck.classList.remove('disabled');
 
-        if (votedCount > 0 && state.isHost) {
-          tableStatus.textContent = votedCount + ' / ' + totalCount + ' voted';
+        if (votedCount === totalCount && totalCount > 0) {
+          tableStatus.innerHTML = '\u{1F389} Everyone voted! Ready to reveal';
+          revealBtn.classList.remove('hidden');
+        } else if (votedCount > 0 && state.isHost) {
+          tableStatus.innerHTML = '\u{1F4AD} ' + votedCount + ' of ' + totalCount + ' voted \u2014 waiting for others...';
           revealBtn.classList.remove('hidden');
         } else if (votedCount > 0) {
-          tableStatus.textContent = votedCount + ' / ' + totalCount + ' voted';
+          tableStatus.innerHTML = '\u{1F4AD} ' + votedCount + ' of ' + totalCount + ' voted \u2014 waiting for others...';
           revealBtn.classList.add('hidden');
         } else {
-          tableStatus.textContent = 'Pick your cards!';
+          tableStatus.innerHTML = '\u{1F3B4} Pick a card below to vote!';
           revealBtn.classList.add('hidden');
         }
       }
