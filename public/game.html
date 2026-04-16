@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning Poker - Game Room</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- Join Modal -->
+  <div id="joinModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Join Game</h2>
+      <p id="modalGameName" class="modal-subtitle"></p>
+      <div class="form-group">
+        <label for="playerName">Your display name</label>
+        <input type="text" id="playerName" placeholder="Enter your name" maxlength="30" autofocus>
+      </div>
+      <button id="joinBtn" class="btn-primary" disabled>Join game</button>
+    </div>
+  </div>
+
+  <!-- Game Room -->
+  <div id="gameRoom" class="game-room hidden">
+    <!-- Header -->
+    <header class="game-header">
+      <div class="header-left">
+        <div class="logo-icon-sm">&#9824;</div>
+        <h1 id="gameName">Game</h1>
+      </div>
+      <div class="header-right">
+        <button id="inviteBtn" class="btn-outline-invite">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Invite players
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Area -->
+    <div class="game-main">
+      <!-- Top Players -->
+      <div id="topPlayers" class="player-row top-row"></div>
+
+      <div class="middle-section">
+        <!-- Left Players -->
+        <div id="leftPlayers" class="player-col left-col"></div>
+
+        <!-- Table -->
+        <div class="poker-table">
+          <div id="lonelySplash" class="lonely-splash hidden">
+            <span class="lonely-emoji">&#129303;</span>
+            <span class="lonely-text">Feeling lonely?</span>
+            <a href="#" id="inviteLinkInner" class="lonely-link">Invite players</a>
+          </div>
+          <div id="tableContent" class="table-content">
+            <div id="tableStatus" class="table-status">Pick your cards!</div>
+            <button id="revealBtn" class="btn-reveal hidden">Reveal votes</button>
+            <button id="resetBtn" class="btn-new-vote hidden">Start new voting</button>
+          </div>
+          <!-- Stats (shown after reveal) -->
+          <div id="statsBar" class="stats-bar hidden">
+            <div class="stat-item"><span class="stat-label">Average</span><span id="statAvg" class="stat-value">-</span></div>
+            <div class="stat-item"><span class="stat-label">Min</span><span id="statMin" class="stat-value">-</span></div>
+            <div class="stat-item"><span class="stat-label">Max</span><span id="statMax" class="stat-value">-</span></div>
+          </div>
+        </div>
+
+        <!-- Right Players -->
+        <div id="rightPlayers" class="player-col right-col"></div>
+      </div>
+
+      <!-- Bottom Players -->
+      <div id="bottomPlayers" class="player-row bottom-row"></div>
+    </div>
+
+    <!-- Card Deck -->
+    <div class="card-deck-area">
+      <p class="deck-label">Choose your card &#128076;</p>
+      <div id="cardDeck" class="card-deck"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const gameId = window.location.pathname.split('/').pop();
+    let socket = null;
+    let myId = null;
+    let selectedCard = null;
+    let gameCards = [];
+    let isRevealed = false;
+    let isHost = false;
+
+    // Elements
+    const joinModal = document.getElementById('joinModal');
+    const gameRoom = document.getElementById('gameRoom');
+    const playerNameInput = document.getElementById('playerName');
+    const joinBtn = document.getElementById('joinBtn');
+    const modalGameName = document.getElementById('modalGameName');
+    const gameNameEl = document.getElementById('gameName');
+    const tableStatus = document.getElementById('tableStatus');
+    const revealBtn = document.getElementById('revealBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const cardDeck = document.getElementById('cardDeck');
+    const inviteBtn = document.getElementById('inviteBtn');
+    const inviteLinkInner = document.getElementById('inviteLinkInner');
+    const lonelySplash = document.getElementById('lonelySplash');
+    const statsBar = document.getElementById('statsBar');
+
+    // Load game info
+    async function loadGame() {
+      try {
+        const res = await fetch('/api/games/' + gameId);
+        if (!res.ok) {
+          alert('Game not found!');
+          window.location.href = '/';
+          return;
+        }
+        const data = await res.json();
+        gameNameEl.textContent = data.name;
+        modalGameName.textContent = data.name;
+        document.title = 'Planning Poker - ' + data.name;
+        gameCards = data.cards;
+      } catch {
+        alert('Failed to load game');
+        window.location.href = '/';
+      }
+    }
+
+    loadGame();
+
+    // Join
+    playerNameInput.addEventListener('input', () => {
+      joinBtn.disabled = !playerNameInput.value.trim();
+    });
+
+    playerNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !joinBtn.disabled) joinBtn.click();
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const name = playerNameInput.value.trim();
+      if (!name) return;
+
+      socket = io();
+
+      socket.on('connect', () => {
+        myId = socket.id;
+        socket.emit('join-game', { gameId, playerName: name });
+      });
+
+      socket.on('game-state', renderState);
+      socket.on('error-msg', (msg) => {
+        alert(msg);
+        window.location.href = '/';
+      });
+
+      joinModal.classList.add('hidden');
+      gameRoom.classList.remove('hidden');
+      renderCards();
+    });
+
+    // Render cards
+    function renderCards() {
+      cardDeck.innerHTML = '';
+      gameCards.forEach(card => {
+        const el = document.createElement('button');
+        el.className = 'poker-card';
+        el.textContent = card;
+        el.dataset.value = card;
+        el.addEventListener('click', () => {
+          if (isRevealed) return;
+          if (selectedCard === card) {
+            selectedCard = null;
+            socket.emit('vote', { vote: null });
+          } else {
+            selectedCard = card;
+            socket.emit('vote', { vote: card });
+          }
+          updateCardSelection();
+        });
+        cardDeck.appendChild(el);
+      });
+    }
+
+    function updateCardSelection() {
+      document.querySelectorAll('.poker-card').forEach(el => {
+        el.classList.toggle('selected', el.dataset.value === selectedCard);
+      });
+    }
+
+    // Distribute players around the table
+    function distributePlayersAroundTable(players) {
+      const top = [], bottom = [], left = [], right = [];
+      const count = players.length;
+
+      if (count <= 2) {
+        // 1-2 players: all on bottom
+        players.forEach(p => bottom.push(p));
+      } else if (count <= 4) {
+        // 3-4: top and bottom
+        const half = Math.ceil(count / 2);
+        players.slice(0, half).forEach(p => top.push(p));
+        players.slice(half).forEach(p => bottom.push(p));
+      } else {
+        // 5+: distribute around
+        const perSide = Math.ceil(count / 4);
+        players.forEach((p, i) => {
+          const side = i % 4;
+          if (side === 0) top.push(p);
+          else if (side === 1) right.push(p);
+          else if (side === 2) bottom.push(p);
+          else left.push(p);
+        });
+      }
+
+      return { top, bottom, left, right };
+    }
+
+    function createPlayerSeat(p, revealed, position) {
+      const div = document.createElement('div');
+      div.className = 'player-seat ' + position;
+
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'player-vote-card';
+
+      if (revealed && p.vote !== null) {
+        cardDiv.classList.add('revealed');
+        cardDiv.textContent = p.vote;
+      } else if (p.hasVoted) {
+        cardDiv.classList.add('face-down');
+      } else {
+        cardDiv.classList.add('no-vote');
+      }
+
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'player-label';
+      nameDiv.textContent = p.name;
+      if (p.id === myId) nameDiv.classList.add('is-me');
+      if (p.isHost) {
+        const crown = document.createElement('span');
+        crown.className = 'host-badge';
+        crown.textContent = ' (host)';
+        nameDiv.appendChild(crown);
+      }
+
+      if (position === 'top') {
+        div.appendChild(nameDiv);
+        div.appendChild(cardDiv);
+      } else {
+        div.appendChild(cardDiv);
+        div.appendChild(nameDiv);
+      }
+
+      return div;
+    }
+
+    // Render game state
+    function renderState(state) {
+      gameNameEl.textContent = state.gameName;
+      isRevealed = state.revealed;
+      isHost = state.isHost;
+
+      const players = state.players;
+
+      // Show lonely message if alone
+      if (players.length <= 1) {
+        lonelySplash.classList.remove('hidden');
+      } else {
+        lonelySplash.classList.add('hidden');
+      }
+
+      // Distribute players
+      const { top, bottom, left, right } = distributePlayersAroundTable(players);
+
+      document.getElementById('topPlayers').innerHTML = '';
+      document.getElementById('bottomPlayers').innerHTML = '';
+      document.getElementById('leftPlayers').innerHTML = '';
+      document.getElementById('rightPlayers').innerHTML = '';
+
+      top.forEach(p => document.getElementById('topPlayers').appendChild(createPlayerSeat(p, state.revealed, 'top')));
+      bottom.forEach(p => document.getElementById('bottomPlayers').appendChild(createPlayerSeat(p, state.revealed, 'bottom')));
+      left.forEach(p => document.getElementById('leftPlayers').appendChild(createPlayerSeat(p, state.revealed, 'left')));
+      right.forEach(p => document.getElementById('rightPlayers').appendChild(createPlayerSeat(p, state.revealed, 'right')));
+
+      // Table status
+      const votedCount = players.filter(p => p.hasVoted).length;
+      const totalCount = players.length;
+
+      if (state.revealed) {
+        tableStatus.textContent = 'Votes revealed!';
+        revealBtn.classList.add('hidden');
+        resetBtn.classList.remove('hidden');
+        cardDeck.classList.add('disabled');
+
+        // Only host sees reset button
+        if (!state.isHost) resetBtn.classList.add('hidden');
+
+        // Stats
+        if (state.stats) {
+          statsBar.classList.remove('hidden');
+          document.getElementById('statAvg').textContent = state.stats.average;
+          document.getElementById('statMin').textContent = state.stats.min;
+          document.getElementById('statMax').textContent = state.stats.max;
+        }
+      } else {
+        statsBar.classList.add('hidden');
+        resetBtn.classList.add('hidden');
+        cardDeck.classList.remove('disabled');
+
+        if (votedCount > 0 && state.isHost) {
+          tableStatus.textContent = votedCount + ' / ' + totalCount + ' voted';
+          revealBtn.classList.remove('hidden');
+        } else if (votedCount > 0) {
+          tableStatus.textContent = votedCount + ' / ' + totalCount + ' voted';
+          revealBtn.classList.add('hidden');
+        } else {
+          tableStatus.textContent = 'Pick your cards!';
+          revealBtn.classList.add('hidden');
+        }
+      }
+    }
+
+    // Actions
+    revealBtn.addEventListener('click', () => socket.emit('reveal'));
+    resetBtn.addEventListener('click', () => {
+      selectedCard = null;
+      updateCardSelection();
+      socket.emit('reset');
+    });
+
+    function copyInviteLink() {
+      const url = window.location.href;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copied to clipboard!');
+      }).catch(() => {
+        prompt('Share this link:', url);
+      });
+    }
+
+    inviteBtn.addEventListener('click', copyInviteLink);
+    inviteLinkInner.addEventListener('click', (e) => {
+      e.preventDefault();
+      copyInviteLink();
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning Poker - Create Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="create-page">
+    <div class="logo">
+      <div class="logo-icon">&#9824;</div>
+      <h1>Planning Poker</h1>
+    </div>
+
+    <div class="create-card">
+      <h2>Create game</h2>
+
+      <div class="form-group">
+        <label for="gameName">Game's name</label>
+        <input type="text" id="gameName" placeholder="Game's name" maxlength="60" autofocus>
+      </div>
+
+      <div class="form-group">
+        <label for="votingSystem">Voting system</label>
+        <select id="votingSystem">
+          <option value="fibonacci">Fibonacci ( 0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, &#9749; )</option>
+          <option value="tshirt">T-Shirt ( XS, S, M, L, XL, XXL, ?, &#9749; )</option>
+          <option value="powers">Powers of 2 ( 0, 1, 2, 4, 8, 16, 32, 64, ?, &#9749; )</option>
+        </select>
+      </div>
+
+      <button id="createBtn" class="btn-primary" disabled>Create game</button>
+    </div>
+  </div>
+
+  <script>
+    const nameInput = document.getElementById('gameName');
+    const createBtn = document.getElementById('createBtn');
+    const votingSystem = document.getElementById('votingSystem');
+
+    nameInput.addEventListener('input', () => {
+      createBtn.disabled = !nameInput.value.trim();
+    });
+
+    createBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      if (!name) return;
+
+      createBtn.disabled = true;
+      createBtn.textContent = 'Creating...';
+
+      try {
+        const res = await fetch('/api/games', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, votingSystem: votingSystem.value }),
+        });
+        const data = await res.json();
+        if (data.id) {
+          window.location.href = '/game/' + data.id;
+        }
+      } catch (err) {
+        alert('Failed to create game');
+        createBtn.disabled = false;
+        createBtn.textContent = 'Create game';
+      }
+    });
+
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !createBtn.disabled) createBtn.click();
+    });
+  </script>
+</body>
+</html>
