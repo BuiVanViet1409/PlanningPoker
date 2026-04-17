@@ -112,27 +112,42 @@
     const lonelySplash = document.getElementById('lonelySplash');
     const statsBar = document.getElementById('statsBar');
 
-    // Load game info
-    async function loadGame() {
-      try {
-        const res = await fetch('/api/games/' + gameId);
-        if (!res.ok) {
-          alert('Game not found!');
-          window.location.href = '/';
-          return;
-        }
-        const data = await res.json();
-        gameNameEl.textContent = data.name;
-        modalGameName.textContent = data.name;
-        document.title = 'Planning Poker - ' + data.name;
-        gameCards = data.cards;
-      } catch {
-        alert('Failed to load game');
-        window.location.href = '/';
+    // Start socket connection IMMEDIATELY (before user enters name) - reduces perceived latency
+    function initSocket() {
+      if (typeof io === 'undefined') {
+        // socket.io client still loading (CDN fallback), retry shortly
+        setTimeout(initSocket, 80);
+        return;
       }
+      socket = io({ transports: ['websocket', 'polling'] });
+      socket.on('connect', () => { myId = socket.id; });
+      socket.on('game-state', (state) => {
+        if (!gameCards.length && state.cards) gameCards = state.cards;
+        renderState(state);
+      });
+      socket.on('game-info', (info) => {
+        gameNameEl.textContent = info.name;
+        modalGameName.textContent = info.name;
+        document.title = 'Planning Poker - ' + info.name;
+        gameCards = info.cards;
+      });
+      socket.on('error-msg', (msg) => {
+        alert(msg);
+        window.location.href = '/';
+      });
+      // Ask server for game info right away so UI can render
+      socket.emit('get-game-info', { gameId });
     }
+    initSocket();
 
-    loadGame();
+    // Prefill saved name from localStorage for instant re-join
+    try {
+      const savedName = localStorage.getItem('pp_playerName');
+      if (savedName) {
+        playerNameInput.value = savedName;
+        joinBtn.disabled = false;
+      }
+    } catch {}
 
     // Join
     playerNameInput.addEventListener('input', () => {
@@ -147,18 +162,19 @@
       const name = playerNameInput.value.trim();
       if (!name) return;
 
-      socket = io();
+      try { localStorage.setItem('pp_playerName', name); } catch {}
 
-      socket.on('connect', () => {
-        myId = socket.id;
+      // Socket already connected - just emit join
+      if (socket && socket.connected) {
         socket.emit('join-game', { gameId, playerName: name });
-      });
-
-      socket.on('game-state', renderState);
-      socket.on('error-msg', (msg) => {
-        alert(msg);
-        window.location.href = '/';
-      });
+      } else {
+        // Fallback if socket not ready yet
+        const tryJoin = () => {
+          if (socket && socket.connected) socket.emit('join-game', { gameId, playerName: name });
+          else setTimeout(tryJoin, 50);
+        };
+        tryJoin();
+      }
 
       joinModal.classList.add('hidden');
       gameRoom.classList.remove('hidden');

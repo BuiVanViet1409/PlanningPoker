@@ -64,6 +64,20 @@ io.on('connection', (socket) => {
   let currentGameId = null;
   let currentPlayerId = null;
 
+  // Send game info WITHOUT joining (for fast page load)
+  socket.on('get-game-info', ({ gameId }) => {
+    const game = games.get(gameId);
+    if (!game) {
+      socket.emit('error-msg', 'Game not found');
+      return;
+    }
+    socket.emit('game-info', {
+      id: game.id,
+      name: game.name,
+      cards: VOTING_SYSTEMS[game.votingSystem]?.cards || VOTING_SYSTEMS.fibonacci.cards,
+    });
+  });
+
   socket.on('join-game', ({ gameId, playerName }) => {
     const game = games.get(gameId);
     if (!game) {
