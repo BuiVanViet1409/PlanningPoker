@@ -691,6 +691,16 @@ body {
   transform: scale(1.25);
 }
 
+.reaction-btn.pressed {
+  animation: btnPressed 0.25s ease;
+}
+
+@keyframes btnPressed {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); background: var(--primary-bg); }
+  100% { transform: scale(1); }
+}
+
 /* Flying emoji area */
 #emojiFlyArea {
   position: fixed;

@@ -512,6 +512,7 @@
     });
 
     reactionPopover.addEventListener('click', (e) => {
+      e.stopPropagation();
       const btn = e.target.closest('.reaction-btn');
       if (!btn || !reactionTargetId) return;
       const emoji = btn.dataset.emoji;
@@ -519,10 +520,13 @@
         if (confirm('Transfer host to this player?')) {
           socket.emit('transfer-host', { targetId: reactionTargetId });
         }
+        closeReactionPopover(); // host transfer closes popover
       } else {
         socket.emit('reaction', { targetId: reactionTargetId, emoji });
+        // Visual feedback on the button, popover stays open
+        btn.classList.add('pressed');
+        setTimeout(() => btn.classList.remove('pressed'), 250);
       }
-      closeReactionPopover();
     });
 
     // Receive reactions
