@@ -231,6 +231,17 @@ body {
   gap: 14px;
 }
 
+.header-home {
+  text-decoration: none;
+  color: inherit;
+  transition: opacity var(--transition);
+  cursor: pointer;
+}
+
+.header-home:hover {
+  opacity: 0.7;
+}
+
 .logo-icon-sm {
   font-size: 30px;
   background: linear-gradient(135deg, #667eea, #764ba2);

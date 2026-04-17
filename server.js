@@ -16,8 +16,10 @@ const games = new Map();
 
 const VOTING_SYSTEMS = {
   fibonacci: { name: 'Fibonacci', cards: ['0', '1', '2', '3', '5', '8', '13', '21', '34', '55', '89', '?', '\u2615'] },
+  estimation: { name: 'Estimation (Story Points)', cards: ['0', '1', '2', '3', '5', '8', '13', '20', '40', '100', '?', '\u2615'] },
   tshirt: { name: 'T-Shirt', cards: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '?', '\u2615'] },
   powers: { name: 'Powers of 2', cards: ['0', '1', '2', '4', '8', '16', '32', '64', '?', '\u2615'] },
+  hours: { name: 'Hours', cards: ['0', '1', '2', '4', '8', '16', '24', '40', '?', '\u2615'] },
 };
 
 // REST: create game
