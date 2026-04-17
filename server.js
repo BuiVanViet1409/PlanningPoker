@@ -64,6 +64,11 @@ io.on('connection', (socket) => {
   let currentGameId = null;
   let currentPlayerId = null;
 
+  // Keepalive ping - prevents idle timeout
+  socket.on('ping-keepalive', () => {
+    socket.emit('pong-keepalive');
+  });
+
   // Send game info WITHOUT joining (for fast page load)
   socket.on('get-game-info', ({ gameId }) => {
     const game = games.get(gameId);
@@ -83,6 +88,12 @@ io.on('connection', (socket) => {
     if (!game) {
       socket.emit('error-msg', 'Game not found');
       return;
+    }
+
+    // Cancel any pending cleanup
+    if (game._cleanupTimeout) {
+      clearTimeout(game._cleanupTimeout);
+      game._cleanupTimeout = null;
     }
 
     currentGameId = gameId;
@@ -176,7 +187,12 @@ io.on('connection', (socket) => {
     if (!game) return;
     game.players.delete(socket.id);
     if (game.players.size === 0) {
-      games.delete(currentGameId);
+      // Grace period: keep the game for 10 minutes so brief disconnects don't destroy it
+      const gidToCleanup = currentGameId;
+      game._cleanupTimeout = setTimeout(() => {
+        const g = games.get(gidToCleanup);
+        if (g && g.players.size === 0) games.delete(gidToCleanup);
+      }, 10 * 60 * 1000);
     } else {
       // Reassign host if host left
       if (game.hostId === socket.id) {

@@ -130,15 +130,64 @@
     const lonelySplash = document.getElementById('lonelySplash');
     const statsBar = document.getElementById('statsBar');
 
+    // Session state (for auto-rejoin on reconnect)
+    let hasJoined = false;
+    let myName = '';
+    let connStatusEl = null;
+
+    function showConnStatus(text, type) {
+      if (!connStatusEl) {
+        connStatusEl = document.createElement('div');
+        connStatusEl.id = 'connStatus';
+        connStatusEl.className = 'conn-status';
+        document.body.appendChild(connStatusEl);
+      }
+      connStatusEl.textContent = text;
+      connStatusEl.className = 'conn-status ' + (type || '');
+    }
+    function hideConnStatus() {
+      if (connStatusEl) connStatusEl.classList.add('hidden');
+    }
+
     // Start socket connection IMMEDIATELY (before user enters name) - reduces perceived latency
     function initSocket() {
       if (typeof io === 'undefined') {
-        // socket.io client still loading (CDN fallback), retry shortly
         setTimeout(initSocket, 80);
         return;
       }
-      socket = io({ transports: ['websocket', 'polling'] });
-      socket.on('connect', () => { myId = socket.id; });
+      // Enable auto-reconnect with infinite retries
+      socket = io({
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 3000,
+        timeout: 10000,
+      });
+
+      socket.on('connect', () => {
+        myId = socket.id;
+        hideConnStatus();
+        // Auto-rejoin after reconnect
+        if (hasJoined && myName) {
+          socket.emit('join-game', { gameId, playerName: myName, isSpectator: amSpectator });
+        } else {
+          socket.emit('get-game-info', { gameId });
+        }
+      });
+
+      socket.on('disconnect', (reason) => {
+        showConnStatus('\u{1F504} Reconnecting...', 'warn');
+      });
+
+      socket.on('reconnect_attempt', () => {
+        showConnStatus('\u{1F504} Reconnecting...', 'warn');
+      });
+
+      socket.on('reconnect_failed', () => {
+        showConnStatus('\u{26A0}\u{FE0F} Connection lost. Refresh the page.', 'error');
+      });
+
       socket.on('game-state', (state) => {
         if (!gameCards.length && state.cards) gameCards = state.cards;
         renderState(state);
@@ -150,13 +199,28 @@
         gameCards = info.cards;
       });
       socket.on('error-msg', (msg) => {
+        // Don't crash on reconnect "game not found" - just show message
+        if (msg === 'Game not found' && hasJoined) {
+          showConnStatus('\u{26A0}\u{FE0F} Game session ended. Please refresh.', 'error');
+          return;
+        }
         alert(msg);
         window.location.href = '/';
       });
-      // Ask server for game info right away so UI can render
-      socket.emit('get-game-info', { gameId });
     }
     initSocket();
+
+    // Keep-alive: ping every 25s to prevent idle timeout on some hosts/proxies
+    setInterval(() => {
+      if (socket && socket.connected) socket.emit('ping-keepalive');
+    }, 25000);
+
+    // Detect tab visibility - force reconnect if tab was hidden long
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && socket && !socket.connected) {
+        socket.connect();
+      }
+    });
 
     // Prefill saved name from localStorage for instant re-join
     try {
@@ -183,6 +247,8 @@
       if (!name) return;
 
       amSpectator = document.getElementById('spectatorCheck').checked;
+      myName = name;
+      hasJoined = true;
 
       try { localStorage.setItem('pp_playerName', name); } catch {}
 
@@ -350,8 +416,23 @@
     // Render game state
     function renderState(state) {
       gameNameEl.textContent = state.gameName;
+      const wasRevealed = isRevealed;
       isRevealed = state.revealed;
       isHost = state.isHost;
+
+      // When transitioning from revealed -> not revealed (new round), fully clear local state
+      if (wasRevealed && !state.revealed) {
+        selectedCard = null;
+        updateCardSelection();
+        statsBar.classList.add('hidden');
+      }
+
+      // Keep local selection in sync with server (handles server-side resets)
+      const me = state.players.find(p => p.id === myId);
+      if (me && me.hasVoted === false && selectedCard !== null) {
+        selectedCard = null;
+        updateCardSelection();
+      }
 
       const players = state.players;
 

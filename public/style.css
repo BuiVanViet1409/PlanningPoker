@@ -910,6 +910,36 @@ body {
 /* ========== UTILITY ========== */
 .hidden { display: none !important; }
 
+/* Connection status banner */
+.conn-status {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: slideDown 0.3s ease;
+}
+
+.conn-status.warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.conn-status.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+@keyframes slideDown {
+  from { transform: translate(-50%, -40px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
 /* Keeps space but invisible - prevents layout shift when toggling */
 .invisible {
   visibility: hidden !important;
