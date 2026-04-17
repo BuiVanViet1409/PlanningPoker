@@ -20,6 +20,10 @@
         <label for="playerName">Your display name</label>
         <input type="text" id="playerName" placeholder="Enter your name" maxlength="30" autofocus>
       </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="spectatorCheck">
+        <span>&#128065;&#65039; Join as spectator (watch only, no voting)</span>
+      </label>
       <button id="joinBtn" class="btn-primary" disabled>Join game</button>
     </div>
   </div>
@@ -158,19 +162,24 @@
       if (e.key === 'Enter' && !joinBtn.disabled) joinBtn.click();
     });
 
+    let amSpectator = false;
+
     joinBtn.addEventListener('click', () => {
       const name = playerNameInput.value.trim();
       if (!name) return;
 
+      amSpectator = document.getElementById('spectatorCheck').checked;
+
       try { localStorage.setItem('pp_playerName', name); } catch {}
+
+      const payload = { gameId, playerName: name, isSpectator: amSpectator };
 
       // Socket already connected - just emit join
       if (socket && socket.connected) {
-        socket.emit('join-game', { gameId, playerName: name });
+        socket.emit('join-game', payload);
       } else {
-        // Fallback if socket not ready yet
         const tryJoin = () => {
-          if (socket && socket.connected) socket.emit('join-game', { gameId, playerName: name });
+          if (socket && socket.connected) socket.emit('join-game', payload);
           else setTimeout(tryJoin, 50);
         };
         tryJoin();
@@ -178,7 +187,13 @@
 
       joinModal.classList.add('hidden');
       gameRoom.classList.remove('hidden');
-      renderCards();
+
+      // Hide card deck for spectators
+      if (amSpectator) {
+        document.querySelector('.card-deck-area').classList.add('hidden');
+      } else {
+        renderCards();
+      }
     });
 
     // Render cards
@@ -245,11 +260,15 @@
     function createPlayerSeat(p, revealed, position) {
       const div = document.createElement('div');
       div.className = 'player-seat ' + position;
+      if (p.isSpectator) div.classList.add('is-spectator');
 
       const cardDiv = document.createElement('div');
       cardDiv.className = 'player-vote-card';
 
-      if (revealed && p.vote !== null) {
+      if (p.isSpectator) {
+        cardDiv.classList.add('spectator');
+        cardDiv.innerHTML = '&#128065;';
+      } else if (revealed && p.vote !== null) {
         cardDiv.classList.add('revealed');
         cardDiv.textContent = p.vote;
       } else if (p.hasVoted) {
@@ -267,6 +286,12 @@
         crown.className = 'host-badge';
         crown.textContent = ' (host)';
         nameDiv.appendChild(crown);
+      }
+      if (p.isSpectator) {
+        const spec = document.createElement('span');
+        spec.className = 'spectator-badge';
+        spec.textContent = ' (spectator)';
+        nameDiv.appendChild(spec);
       }
 
       if (position === 'top') {
@@ -308,9 +333,10 @@
       left.forEach(p => document.getElementById('leftPlayers').appendChild(createPlayerSeat(p, state.revealed, 'left')));
       right.forEach(p => document.getElementById('rightPlayers').appendChild(createPlayerSeat(p, state.revealed, 'right')));
 
-      // Table status
-      const votedCount = players.filter(p => p.hasVoted).length;
-      const totalCount = players.length;
+      // Table status (spectators don't count)
+      const voters = players.filter(p => !p.isSpectator);
+      const votedCount = voters.filter(p => p.hasVoted).length;
+      const totalCount = voters.length;
 
       if (state.revealed) {
         tableStatus.innerHTML = state.stats && state.stats.consensus
@@ -335,7 +361,10 @@
         resetBtn.classList.add('hidden');
         cardDeck.classList.remove('disabled');
 
-        if (votedCount === totalCount && totalCount > 0) {
+        if (totalCount === 0) {
+          tableStatus.innerHTML = '\u{1F440} Only spectators here \u2014 waiting for voters...';
+          revealBtn.classList.add('hidden');
+        } else if (votedCount === totalCount && totalCount > 0) {
           tableStatus.innerHTML = state.isHost
             ? '\u{1F389} Everyone voted! Click to reveal'
             : '\u{1F389} Everyone voted! Waiting for host to reveal...';

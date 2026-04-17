@@ -78,7 +78,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('join-game', ({ gameId, playerName }) => {
+  socket.on('join-game', ({ gameId, playerName, isSpectator }) => {
     const game = games.get(gameId);
     if (!game) {
       socket.emit('error-msg', 'Game not found');
@@ -88,8 +88,11 @@ io.on('connection', (socket) => {
     currentGameId = gameId;
     currentPlayerId = socket.id;
 
-    // First player becomes host
-    if (game.players.size === 0 || !game.hostId) {
+    // First NON-spectator becomes host. If only spectators, first person is host.
+    if (!game.hostId) {
+      game.hostId = socket.id;
+    } else if (game.players.get(game.hostId)?.isSpectator && !isSpectator) {
+      // Promote this non-spectator to host if current host is spectator
       game.hostId = socket.id;
     }
 
@@ -97,6 +100,7 @@ io.on('connection', (socket) => {
       id: socket.id,
       name: playerName,
       vote: null,
+      isSpectator: !!isSpectator,
     });
 
     socket.join(gameId);
@@ -109,7 +113,7 @@ io.on('connection', (socket) => {
     if (!game || game.revealed) return;
 
     const player = game.players.get(socket.id);
-    if (player) {
+    if (player && !player.isSpectator) {
       player.vote = vote;
       broadcastGameState(currentGameId);
     }
@@ -163,6 +167,7 @@ function broadcastGameState(gameId) {
       hasVoted: p.vote !== null,
       vote: game.revealed ? p.vote : null,
       isHost: p.id === game.hostId,
+      isSpectator: !!p.isSpectator,
     });
   }
 

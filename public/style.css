@@ -494,6 +494,44 @@ body {
   font-weight: 700;
 }
 
+/* Checkbox row in modal */
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: 16px;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Spectator styling */
+.player-seat.is-spectator {
+  opacity: 0.75;
+}
+
+.player-vote-card.spectator {
+  background: transparent;
+  border: 2px dashed var(--text-muted);
+  color: var(--text-muted);
+  font-size: 22px;
+}
+
+.spectator-badge {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-style: italic;
+}
+
 .host-badge {
   font-size: 13px;
   color: var(--warning);
