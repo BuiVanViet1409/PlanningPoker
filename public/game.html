@@ -320,14 +320,15 @@
         cardDeck.classList.remove('disabled');
 
         if (votedCount === totalCount && totalCount > 0) {
-          tableStatus.innerHTML = '\u{1F389} Everyone voted! Ready to reveal';
-          revealBtn.classList.remove('hidden');
-        } else if (votedCount > 0 && state.isHost) {
-          tableStatus.innerHTML = '\u{1F4AD} ' + votedCount + ' of ' + totalCount + ' voted \u2014 waiting for others...';
-          revealBtn.classList.remove('hidden');
+          tableStatus.innerHTML = state.isHost
+            ? '\u{1F389} Everyone voted! Click to reveal'
+            : '\u{1F389} Everyone voted! Waiting for host to reveal...';
+          if (state.isHost) revealBtn.classList.remove('hidden');
+          else revealBtn.classList.add('hidden');
         } else if (votedCount > 0) {
           tableStatus.innerHTML = '\u{1F4AD} ' + votedCount + ' of ' + totalCount + ' voted \u2014 waiting for others...';
-          revealBtn.classList.add('hidden');
+          if (state.isHost) revealBtn.classList.remove('hidden');
+          else revealBtn.classList.add('hidden');
         } else {
           tableStatus.innerHTML = '\u{1F3B4} Pick a card below to vote!';
           revealBtn.classList.add('hidden');
