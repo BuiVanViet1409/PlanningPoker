@@ -534,6 +534,11 @@
       // socket listeners added below after socket init, use a queue approach
     }
 
+    // Stacking tracker: key = fromId|toId|emoji, value = { count, timeout }
+    const reactionStack = new Map();
+    const STACK_WINDOW_MS = 1500;
+    const MAX_STACK = 6; // cap stacking
+
     function flyEmoji(fromId, toId, emoji) {
       const toEl = document.querySelector('.player-seat[data-player-id="' + toId + '"]');
       if (!toEl) return;
@@ -541,35 +546,58 @@
       const endX = toRect.left + toRect.width / 2;
       const endY = toRect.top + toRect.height / 2;
 
-      // Choose a random edge of screen to start from
-      const edge = Math.floor(Math.random() * 4); // 0=left, 1=right, 2=top, 3=bottom
+      // Stacking: consecutive same emoji to same target within window grows
+      const key = fromId + '|' + toId + '|' + emoji;
+      const stack = reactionStack.get(key) || { count: 0, timeout: null };
+      stack.count = Math.min(stack.count + 1, MAX_STACK);
+      if (stack.timeout) clearTimeout(stack.timeout);
+      stack.timeout = setTimeout(() => reactionStack.delete(key), STACK_WINDOW_MS);
+      reactionStack.set(key, stack);
+
+      // Size grows: base 36px -> max ~80px; burst scale grows too
+      const level = stack.count;
+      const fontSize = 32 + level * 8; // 40, 48, 56, 64, 72, 80
+      const landScale = 1 + level * 0.18; // 1.18 ... 2.08
+
+      // Random edge start
+      const edge = Math.floor(Math.random() * 4);
       let startX, startY;
-      const margin = 80;
-      if (edge === 0) { startX = -margin; startY = Math.random() * window.innerHeight; }
-      else if (edge === 1) { startX = window.innerWidth + margin; startY = Math.random() * window.innerHeight; }
-      else if (edge === 2) { startX = Math.random() * window.innerWidth; startY = -margin; }
-      else { startX = Math.random() * window.innerWidth; startY = window.innerHeight + margin; }
+      const margin = 100;
+      if (edge === 0) { startX = -margin; startY = 100 + Math.random() * (window.innerHeight - 200); }
+      else if (edge === 1) { startX = window.innerWidth + margin; startY = 100 + Math.random() * (window.innerHeight - 200); }
+      else if (edge === 2) { startX = 100 + Math.random() * (window.innerWidth - 200); startY = -margin; }
+      else { startX = 100 + Math.random() * (window.innerWidth - 200); startY = window.innerHeight + margin; }
 
       const el = document.createElement('div');
       el.className = 'flying-emoji';
       el.textContent = emoji;
       el.style.left = startX + 'px';
       el.style.top = startY + 'px';
+      el.style.fontSize = fontSize + 'px';
       el.style.setProperty('--dx', (endX - startX) + 'px');
       el.style.setProperty('--dy', (endY - startY) + 'px');
+      el.style.setProperty('--landScale', landScale);
       document.getElementById('emojiFlyArea').appendChild(el);
 
-      // Burst at target after fly animation completes
+      // Small shake/bounce on target when emoji lands
       setTimeout(() => {
+        if (toEl) {
+          toEl.classList.remove('hit'); // restart
+          void toEl.offsetWidth;
+          toEl.classList.add('hit');
+          setTimeout(() => toEl.classList.remove('hit'), 500);
+        }
         el.classList.add('burst');
-        for (let i = 0; i < 8; i++) {
+        const particleCount = 6 + level * 2; // more particles when stacked
+        for (let i = 0; i < particleCount; i++) {
           const b = document.createElement('div');
           b.className = 'burst-emoji';
           b.textContent = emoji;
           b.style.left = endX + 'px';
           b.style.top = endY + 'px';
-          const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.4;
-          const dist = 60 + Math.random() * 50;
+          b.style.fontSize = (18 + level * 3) + 'px';
+          const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.4;
+          const dist = 60 + Math.random() * 60 + level * 10;
           b.style.setProperty('--bx', Math.cos(angle) * dist + 'px');
           b.style.setProperty('--by', Math.sin(angle) * dist + 'px');
           document.getElementById('emojiFlyArea').appendChild(b);
@@ -577,7 +605,7 @@
         }
       }, 700);
 
-      setTimeout(() => el.remove(), 1300);
+      setTimeout(() => el.remove(), 1200);
     }
 
     // Attach socket listener for reactions once socket is ready

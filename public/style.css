@@ -639,6 +639,21 @@ body {
   opacity: 0.75;
 }
 
+/* Hit animation when emoji lands */
+.player-seat.hit {
+  animation: hitShake 0.4s ease;
+}
+
+@keyframes hitShake {
+  0% { transform: translate(0, 0) rotate(0); }
+  15% { transform: translate(-3px, -2px) rotate(-2deg); }
+  30% { transform: translate(3px, 2px) rotate(2deg); }
+  45% { transform: translate(-2px, 2px) rotate(-1deg); }
+  60% { transform: translate(2px, -2px) rotate(1deg); }
+  75% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+  100% { transform: translate(0, 0) rotate(0); }
+}
+
 /* Clickable player seat (for reactions) */
 .player-seat.clickable {
   cursor: pointer;
@@ -714,23 +729,36 @@ body {
   position: fixed;
   font-size: 36px;
   transform: translate(-50%, -50%);
-  animation: flyToTarget 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  will-change: transform;
+  animation: flyToTarget 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
 }
 
 @keyframes flyToTarget {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.7; }
-  30% { transform: translate(calc(-50% + var(--dx) * 0.3), calc(-50% + var(--dy) * 0.3 - 40px)) scale(1.5); opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2); opacity: 1; }
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+  }
+  15% { opacity: 1; }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(var(--landScale, 1.4));
+    opacity: 1;
+  }
 }
 
 .flying-emoji.burst {
-  animation: burstOut 0.3s ease-out forwards;
+  animation: burstOut 0.35s ease-out forwards;
 }
 
 @keyframes burstOut {
-  from { opacity: 1; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.5); }
-  to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(2.2); }
+  from {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(var(--landScale, 1.4));
+  }
+  to {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(calc(var(--landScale, 1.4) * 1.8));
+  }
 }
 
 .burst-emoji {
