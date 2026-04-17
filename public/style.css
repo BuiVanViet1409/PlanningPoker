@@ -481,12 +481,12 @@ body {
 }
 
 .player-label {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text);
   text-align: center;
   word-break: break-word;
-  max-width: 120px;
+  max-width: 160px;
 }
 
 .player-label.is-me {
@@ -495,7 +495,7 @@ body {
 }
 
 .host-badge {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--warning);
   font-weight: 700;
 }
