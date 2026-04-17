@@ -88,11 +88,8 @@ io.on('connection', (socket) => {
     currentGameId = gameId;
     currentPlayerId = socket.id;
 
-    // First NON-spectator becomes host. If only spectators, first person is host.
+    // First person to join is host - stays host until they manually transfer
     if (!game.hostId) {
-      game.hostId = socket.id;
-    } else if (game.players.get(game.hostId)?.isSpectator && !isSpectator) {
-      // Promote this non-spectator to host if current host is spectator
       game.hostId = socket.id;
     }
 
@@ -117,6 +114,20 @@ io.on('connection', (socket) => {
       player.vote = vote;
       broadcastGameState(currentGameId);
     }
+  });
+
+  socket.on('reaction', ({ targetId, emoji }) => {
+    if (!currentGameId) return;
+    const game = games.get(currentGameId);
+    if (!game) return;
+    if (!game.players.has(targetId)) return;
+    // Simple rate limit: ignore if emoji is too long / weird
+    if (typeof emoji !== 'string' || emoji.length > 16) return;
+    io.to(currentGameId).emit('reaction', {
+      fromId: socket.id,
+      toId: targetId,
+      emoji,
+    });
   });
 
   socket.on('transfer-host', ({ targetId }) => {

@@ -623,40 +623,102 @@ body {
   opacity: 0.75;
 }
 
-/* Host transfer - hint on hover */
-.player-seat.transferable {
+/* Clickable player seat (for reactions) */
+.player-seat.clickable {
   cursor: pointer;
   padding: 6px;
   margin: -6px;
-  border-radius: 10px;
+  border-radius: 12px;
   transition: background var(--transition);
-  position: relative;
 }
 
-.player-seat.transferable:hover {
-  background: rgba(245, 158, 11, 0.1);
+.player-seat.clickable:hover {
+  background: rgba(99, 102, 241, 0.08);
 }
 
-.player-seat.transferable::after {
-  content: '\1F451 Make host';
-  position: absolute;
-  bottom: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--warning);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-  opacity: 0;
+/* Reaction popover */
+.reaction-popover {
+  position: fixed;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  z-index: 1000;
+  animation: popIn 0.15s ease;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.reaction-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background var(--transition), transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reaction-btn:hover {
+  background: var(--primary-bg);
+  transform: scale(1.25);
+}
+
+/* Flying emoji area */
+#emojiFlyArea {
+  position: fixed;
+  inset: 0;
   pointer-events: none;
-  transition: opacity var(--transition);
+  z-index: 999;
+  overflow: hidden;
 }
 
-.player-seat.transferable:hover::after {
-  opacity: 1;
+.flying-emoji {
+  position: fixed;
+  font-size: 36px;
+  transform: translate(-50%, -50%);
+  animation: flyToTarget 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  will-change: transform;
+}
+
+@keyframes flyToTarget {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.7; }
+  30% { transform: translate(calc(-50% + var(--dx) * 0.3), calc(-50% + var(--dy) * 0.3 - 40px)) scale(1.5); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.2); opacity: 1; }
+}
+
+.flying-emoji.burst {
+  animation: burstOut 0.3s ease-out forwards;
+}
+
+@keyframes burstOut {
+  from { opacity: 1; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.5); }
+  to { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(2.2); }
+}
+
+.burst-emoji {
+  position: fixed;
+  font-size: 22px;
+  transform: translate(-50%, -50%);
+  animation: burstParticle 0.9s ease-out forwards;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+@keyframes burstParticle {
+  0% { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--bx)), calc(-50% + var(--by) + 30px)) scale(0.6); opacity: 0; }
 }
 
 .player-vote-card.spectator {
@@ -664,13 +726,6 @@ body {
   border: 2px dashed var(--text-muted);
   color: var(--text-muted);
   font-size: 22px;
-}
-
-.spectator-badge {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  font-style: italic;
 }
 
 .host-badge {
