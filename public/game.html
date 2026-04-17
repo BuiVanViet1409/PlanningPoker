@@ -130,6 +130,18 @@
     const lonelySplash = document.getElementById('lonelySplash');
     const statsBar = document.getElementById('statsBar');
 
+    // Persistent clientId for this browser (prevents duplicate tabs as separate users)
+    let clientId = null;
+    try {
+      clientId = localStorage.getItem('pp_clientId');
+      if (!clientId) {
+        clientId = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('pp_clientId', clientId);
+      }
+    } catch {
+      clientId = 'c_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
     // Session state (for auto-rejoin on reconnect)
     let hasJoined = false;
     let myName = '';
@@ -147,6 +159,18 @@
     }
     function hideConnStatus() {
       if (connStatusEl) connStatusEl.classList.add('hidden');
+    }
+
+    function showKickedOverlay(reason) {
+      const overlay = document.createElement('div');
+      overlay.className = 'kicked-overlay';
+      overlay.innerHTML = '<div class="kicked-modal">' +
+        '<div class="kicked-emoji">\u{1F44B}</div>' +
+        '<h2>Session moved</h2>' +
+        '<p>' + reason + '</p>' +
+        '<button class="btn-primary" onclick="location.reload()">Take over this tab</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
     }
 
     // Start socket connection IMMEDIATELY (before user enters name) - reduces perceived latency
@@ -170,7 +194,7 @@
         hideConnStatus();
         // Auto-rejoin after reconnect
         if (hasJoined && myName) {
-          socket.emit('join-game', { gameId, playerName: myName, isSpectator: amSpectator });
+          socket.emit('join-game', { gameId, playerName: myName, isSpectator: amSpectator, clientId });
         } else {
           socket.emit('get-game-info', { gameId });
         }
@@ -206,6 +230,13 @@
         }
         alert(msg);
         window.location.href = '/';
+      });
+
+      socket.on('kicked', (reason) => {
+        hasJoined = false;
+        // Disable auto-reconnect and show blocking overlay
+        socket.disconnect();
+        showKickedOverlay(reason || 'This session was opened in another tab.');
       });
     }
     initSocket();
@@ -252,7 +283,7 @@
 
       try { localStorage.setItem('pp_playerName', name); } catch {}
 
-      const payload = { gameId, playerName: name, isSpectator: amSpectator };
+      const payload = { gameId, playerName: name, isSpectator: amSpectator, clientId };
 
       // Socket already connected - just emit join
       if (socket && socket.connected) {

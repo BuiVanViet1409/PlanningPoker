@@ -83,7 +83,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('join-game', ({ gameId, playerName, isSpectator }) => {
+  socket.on('join-game', ({ gameId, playerName, isSpectator, clientId }) => {
     const game = games.get(gameId);
     if (!game) {
       socket.emit('error-msg', 'Game not found');
@@ -94,6 +94,38 @@ io.on('connection', (socket) => {
     if (game._cleanupTimeout) {
       clearTimeout(game._cleanupTimeout);
       game._cleanupTimeout = null;
+    }
+
+    // Duplicate clientId check: kick any existing socket(s) with same clientId in this game
+    if (clientId) {
+      for (const [sockId, p] of game.players) {
+        if (p.clientId === clientId && sockId !== socket.id) {
+          // Preserve host & vote state when replacing
+          const oldPlayer = p;
+          game.players.delete(sockId);
+          if (game.hostId === sockId) game.hostId = socket.id;
+          const oldSocket = io.sockets.sockets.get(sockId);
+          if (oldSocket) {
+            oldSocket.emit('kicked', 'You opened this game in another tab.');
+            oldSocket.leave(gameId);
+          }
+          // Carry over vote if transitioning from same player session
+          if (oldPlayer && oldPlayer.vote !== null) {
+            game.players.set(socket.id, {
+              id: socket.id,
+              name: playerName,
+              vote: oldPlayer.vote,
+              isSpectator: !!isSpectator,
+              clientId,
+            });
+            currentGameId = gameId;
+            currentPlayerId = socket.id;
+            socket.join(gameId);
+            broadcastGameState(gameId);
+            return;
+          }
+        }
+      }
     }
 
     currentGameId = gameId;
@@ -109,6 +141,7 @@ io.on('connection', (socket) => {
       name: playerName,
       vote: null,
       isSpectator: !!isSpectator,
+      clientId,
     });
 
     socket.join(gameId);
