@@ -119,6 +119,15 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('transfer-host', ({ targetId }) => {
+    if (!currentGameId) return;
+    const game = games.get(currentGameId);
+    if (!game || socket.id !== game.hostId) return;
+    if (!game.players.has(targetId)) return;
+    game.hostId = targetId;
+    broadcastGameState(currentGameId);
+  });
+
   socket.on('set-spectator', ({ isSpectator }) => {
     if (!currentGameId) return;
     const game = games.get(currentGameId);

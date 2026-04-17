@@ -554,28 +554,109 @@ body {
   .switch-label { display: none; }
 }
 
-/* Checkbox row in modal */
-.checkbox-row {
+/* Slide toggle (join modal) */
+.slide-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
+  gap: 12px;
   cursor: pointer;
-  margin-bottom: 16px;
   user-select: none;
+  margin: 8px 0 20px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  transition: all var(--transition);
 }
 
-.checkbox-row input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
-  cursor: pointer;
+.slide-toggle:hover {
+  background: var(--primary-bg);
+  border-color: var(--primary-light);
+}
+
+.slide-toggle input[type="checkbox"] { display: none; }
+
+.slide-track {
+  width: 40px;
+  height: 22px;
+  background: #cbd5e1;
+  border-radius: 20px;
+  position: relative;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+
+.slide-toggle input:checked + .slide-track {
+  background: var(--primary);
+}
+
+.slide-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.slide-toggle input:checked + .slide-track .slide-thumb {
+  transform: translateX(18px);
+}
+
+.slide-text {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.slide-text em {
+  color: var(--text-secondary);
+  font-style: normal;
+  font-size: 12px;
 }
 
 /* Spectator styling */
 .player-seat.is-spectator {
   opacity: 0.75;
+}
+
+/* Host transfer - hint on hover */
+.player-seat.transferable {
+  cursor: pointer;
+  padding: 6px;
+  margin: -6px;
+  border-radius: 10px;
+  transition: background var(--transition);
+  position: relative;
+}
+
+.player-seat.transferable:hover {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.player-seat.transferable::after {
+  content: '\1F451 Make host';
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--warning);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+.player-seat.transferable:hover::after {
+  opacity: 1;
 }
 
 .player-vote-card.spectator {

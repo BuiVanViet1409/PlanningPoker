@@ -20,9 +20,10 @@
         <label for="playerName">Your display name</label>
         <input type="text" id="playerName" placeholder="Enter your name" maxlength="30" autofocus>
       </div>
-      <label class="checkbox-row">
+      <label class="slide-toggle">
         <input type="checkbox" id="spectatorCheck">
-        <span>&#128065;&#65039; Join as spectator (watch only, no voting)</span>
+        <span class="slide-track"><span class="slide-thumb"></span></span>
+        <span class="slide-text">Join as spectator <em>(watch only)</em></span>
       </label>
       <button id="joinBtn" class="btn-primary" disabled>Join game</button>
     </div>
@@ -292,6 +293,17 @@
       const div = document.createElement('div');
       div.className = 'player-seat ' + position;
       if (p.isSpectator) div.classList.add('is-spectator');
+
+      // Host can transfer host role by clicking other players
+      if (isHost && p.id !== myId && !p.isHost) {
+        div.classList.add('transferable');
+        div.title = 'Click to make ' + p.name + ' the host';
+        div.addEventListener('click', () => {
+          if (confirm('Transfer host to ' + p.name + '?')) {
+            socket.emit('transfer-host', { targetId: p.id });
+          }
+        });
+      }
 
       const cardDiv = document.createElement('div');
       cardDiv.className = 'player-vote-card';
