@@ -119,6 +119,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('set-spectator', ({ isSpectator }) => {
+    if (!currentGameId) return;
+    const game = games.get(currentGameId);
+    if (!game) return;
+    const player = game.players.get(socket.id);
+    if (!player) return;
+    player.isSpectator = !!isSpectator;
+    // Clear vote when becoming spectator
+    if (player.isSpectator) player.vote = null;
+    broadcastGameState(currentGameId);
+  });
+
   socket.on('reveal', () => {
     if (!currentGameId) return;
     const game = games.get(currentGameId);
