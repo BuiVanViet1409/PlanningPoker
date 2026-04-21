@@ -6,7 +6,13 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  // Keep connection alive longer - detect dead connections after 2 minutes
+  pingInterval: 25000, // send ping every 25s
+  pingTimeout: 120000, // wait up to 2min for pong before considering dead
+  // Generous upgrade timeout
+  upgradeTimeout: 30000,
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -42,6 +48,11 @@ app.post('/api/games', (req, res) => {
   res.json({ id, name: game.name });
 });
 
+// Health/keepalive ping (keeps Render free tier warm when clients call it)
+app.get('/api/ping', (req, res) => {
+  res.json({ ok: true, games: games.size, uptime: process.uptime() });
+});
+
 // REST: get game info
 app.get('/api/games/:id', (req, res) => {
   const game = games.get(req.params.id);
@@ -64,8 +75,12 @@ io.on('connection', (socket) => {
   let currentGameId = null;
   let currentPlayerId = null;
 
-  // Keepalive ping - prevents idle timeout
+  // Keepalive ping - prevents idle timeout & marks game as active
   socket.on('ping-keepalive', () => {
+    if (currentGameId) {
+      const game = games.get(currentGameId);
+      if (game) game.lastActivity = Date.now();
+    }
     socket.emit('pong-keepalive');
   });
 

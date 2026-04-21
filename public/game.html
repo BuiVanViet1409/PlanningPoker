@@ -241,10 +241,15 @@
     }
     initSocket();
 
-    // Keep-alive: ping every 25s to prevent idle timeout on some hosts/proxies
+    // Keep-alive: socket ping every 25s (WebSocket level)
     setInterval(() => {
       if (socket && socket.connected) socket.emit('ping-keepalive');
     }, 25000);
+
+    // HTTP ping every 4 min: keeps Render free tier from sleeping while anyone is in a game
+    setInterval(() => {
+      if (hasJoined) fetch('/api/ping').catch(() => {});
+    }, 4 * 60 * 1000);
 
     // Detect tab visibility - force reconnect if tab was hidden long
     document.addEventListener('visibilitychange', () => {
