@@ -225,7 +225,7 @@ io.on('connection', (socket) => {
       game._cleanupTimeout = setTimeout(() => {
         const g = games.get(gidToCleanup);
         if (g && g.players.size === 0) games.delete(gidToCleanup);
-      }, 10 * 60 * 1000);
+      }, 3 * 60 * 60 * 1000); // 3 hours
     } else {
       // Reassign host if host left
       if (game.hostId === socket.id) {
